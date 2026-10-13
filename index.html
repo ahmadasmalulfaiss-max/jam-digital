@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jam Digital Elegan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg: #071026;
+      --card: rgba(255,255,255,0.03);
+      --muted: #9fb0c9;
+      --accent: #7c3aed;
+      --glass: rgba(255,255,255,0.03);
+      --radius: 18px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: Inter, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: radial-gradient(900px 400px at 10% 10%, rgba(124,58,237,0.08), transparent 10%),
+                  radial-gradient(700px 300px at 90% 90%, rgba(6,182,212,0.04), transparent 8%),
+                  var(--bg);
+      color: #e6eef8;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:28px;
+    }
+
+    .card{
+      width:min(760px, 96%);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius: calc(var(--radius));
+      padding:28px;
+      box-shadow: 0 12px 40px rgba(2,6,23,0.7), inset 0 1px 0 rgba(255,255,255,0.02);
+      display:flex;
+      gap:20px;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .display{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-width:0;
+    }
+
+    .time{
+      display:flex;
+      align-items:baseline;
+      gap:16px;
+      font-weight:700;
+      letter-spacing:0.6px;
+    }
+    .hm{
+      font-size:64px;
+      line-height:1;
+    }
+    .sec{
+      font-size:28px;
+      opacity:0.85;
+      font-weight:600;
+    }
+    .ampm{
+      font-size:14px;
+      color:var(--muted);
+      font-weight:600;
+      margin-left:6px;
+    }
+
+    .meta{
+      color:var(--muted);
+      font-weight:500;
+      margin-top:6px;
+      font-size:15px;
+    }
+
+    .controls{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-width:220px;
+    }
+    .controls .label{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+    .button{
+      background: linear-gradient(90deg,var(--accent),#06b6d4);
+      border: none;
+      color: white;
+      padding:8px 12px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:700;
+      box-shadow: 0 6px 18px rgba(7,10,35,0.45);
+    }
+
+    .swatches{display:flex;gap:8px;align-items:center}
+    .swatch{width:36px;height:36px;border-radius:8px;cursor:pointer;border:2px solid rgba(255,255,255,0.04)}
+
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+    @media (max-width:720px){
+      .card{flex-direction:column;align-items:stretch}
+      .hm{font-size:48px}
+      .controls{flex-direction:row;gap:8px;flex-wrap:wrap}
+      .controls > *{flex:1}
+    }
+  </style>
+</head>
+<body>
+  <main class="card" role="application" aria-label="Jam digital elegan">
+    <section class="display" aria-live="polite">
+      <div class="time" id="timeWrap">
+        <div class="hm" id="hm">--:--</div>
+        <div class="sec" id="sec">--</div>
+        <div class="ampm" id="ampm"></div>
+      </div>
+      <div class="meta" id="date">Memuat tanggal…</div>
+      <div class="hint">Klik warna untuk ganti aksen. Format 24/12 dapat diganti di samping.</div>
+    </section>
+
+    <aside class="controls" aria-label="Kontrol jam">
+      <div>
+        <div class="label">Format Waktu</div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="button" id="btn24">24 Jam</button>
+          <button class="button" id="btn12" style="background:transparent;color:var(--muted);font-weight:700;border:1px solid rgba(255,255,255,0.04)">12 Jam</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="label">Aksen</div>
+        <div class="swatches" style="margin-top:8px">
+          <div class="swatch" data-color="#7c3aed" style="background:#7c3aed"></div>
+          <div class="swatch" data-color="#06b6d4" style="background:#06b6d4"></div>
+          <div class="swatch" data-color="#ef4444" style="background:#ef4444"></div>
+          <div class="swatch" data-color="#f59e0b" style="background:#f59e0b"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="label">Tampilkan Zona</div>
+        <div style="margin-top:8px;color:var(--muted);font-size:13px" id="tz">Mendeteksi zona…</div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    // Helper
+    const $ = s => document.querySelector(s);
+    const hmEl = $('#hm'), secEl = $('#sec'), amEl = $('#ampm'), dateEl = $('#date'), tzEl = $('#tz');
+    const btn24 = $('#btn24'), btn12 = $('#btn12');
+
+    // Settings (simple persist)
+    const S = {
+      fmt24: (localStorage.getItem('jd_fmt24') === null) ? true : (localStorage.getItem('jd_fmt24') === 'true'),
+      accent: localStorage.getItem('jd_accent') || getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#7c3aed'
+    };
+
+    function applyAccent(c){
+      document.documentElement.style.setProperty('--accent', c);
+      localStorage.setItem('jd_accent', c);
+      // update primary button color
+      document.querySelectorAll('.button').forEach(b => b.style.background = 'linear-gradient(90deg,'+c+',#06b6d4)');
+    }
+    applyAccent(S.accent);
+
+    // format buttons
+    function refreshFmtButtons(){
+      if(S.fmt24){
+        btn24.style.opacity = '1'; btn12.style.opacity = '0.7';
+        btn24.style.background = 'linear-gradient(90deg,'+S.accent+',#06b6d4)';
+        btn12.style.background = 'transparent'; btn12.style.color = 'var(--muted)';
+      } else {
+        btn12.style.opacity = '1'; btn24.style.opacity = '0.7';
+        btn12.style.background = 'linear-gradient(90deg,'+S.accent+',#06b6d4)';
+        btn24.style.background = 'transparent'; btn24.style.color = 'var(--muted)';
+      }
+    }
+    btn24.addEventListener('click', ()=>{ S.fmt24 = true; localStorage.setItem('jd_fmt24','true'); refreshFmtButtons(); });
+    btn12.addEventListener('click', ()=>{ S.fmt24 = false; localStorage.setItem('jd_fmt24','false'); refreshFmtButtons(); });
+    refreshFmtButtons();
+
+    // swatches
+    document.querySelectorAll('.swatch').forEach(s => {
+      s.addEventListener('click', e => applyAccent(e.currentTarget.dataset.color));
+    });
+
+    // time update
+    function two(n){ return String(n).padStart(2,'0'); }
+    function update(){
+      const now = new Date();
+      let hh = now.getHours();
+      const mm = now.getMinutes();
+      const ss = now.getSeconds();
+
+      let ampm = '';
+      if(!S.fmt24){
+        ampm = hh >= 12 ? 'PM' : 'AM';
+        hh = hh % 12 || 12;
+      }
+
+      hmEl.textContent = `${two(hh)}:${two(mm)}`;
+      secEl.textContent = two(ss);
+      amEl.textContent = ampm;
+
+      dateEl.textContent = now.toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+      try {
+        tzEl.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      } catch(e){
+        tzEl.textContent = 'Lokal';
+      }
+
+      // schedule next tick to align on the second
+      const ms = now.getMilliseconds();
+      setTimeout(update, 1000 - ms);
+    }
+    update();
+
+    // accessibility: keyboard focus
+    document.querySelectorAll('.button, .swatch').forEach(el => el.tabIndex = 0);
+  </script>
+</body>
+</html>
